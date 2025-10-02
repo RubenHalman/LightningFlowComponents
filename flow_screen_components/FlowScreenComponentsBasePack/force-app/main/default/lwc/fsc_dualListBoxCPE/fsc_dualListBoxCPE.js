@@ -60,7 +60,26 @@ export default class DualListBoxCpe extends LightningElement {
             valueDataType: null,
             isCollection: true,
             label: 'Select Field Descriptor Values'
-        }
+        },
+        // New picklist properties
+        usePicklistValues: {
+            value: null,
+            valueDataType: null,
+            isCollection: false,
+            label: 'Use Picklist Values',
+        },
+        objectApiName: {
+            value: null,
+            valueDataType: null,
+            isCollection: false,
+            label: 'Object API Name',
+        },
+        fieldApiName: {
+            value: null,
+            valueDataType: null,
+            isCollection: false,
+            label: 'Field API Name',
+        },
     };
 
     selectDataSourceOptions = [
@@ -83,7 +102,15 @@ export default class DualListBoxCpe extends LightningElement {
             label: 'FieldDescriptor Collection (use with Get Field Information action)',
             value: defaults.originalObject,
             allowedAttributes: [inputTypeToOutputAttributeName.object, inputTypeToInputAttributeName.object]
-        }
+        },
+        {
+            label: 'Picklist Values (from Salesforce field)',
+            value: defaults.picklist,
+            allowedAttributes: [
+                inputTypeToOutputAttributeName.picklist,
+                inputTypeToInputAttributeName.picklist,
+            ],
+        },
     ];
 
 
@@ -114,6 +141,7 @@ export default class DualListBoxCpe extends LightningElement {
     }
 
 	_automaticOutputVariables;
+	rendered;
 
     initializeValues(value) {
         if (this._values && this._values.length) {
@@ -125,6 +153,28 @@ export default class DualListBoxCpe extends LightningElement {
             });
         }
         this.handleDefaultAttributes();
+    }
+
+    renderedCallback() {
+        console.log("renderedCallback called, rendered:", this.rendered);
+        if (!this.rendered) {
+            this.rendered = true;
+            const flowComboboxes = this.template.querySelectorAll(
+                "c-fsc_flow-combobox"
+            );
+            console.log("Found flow comboboxes:", flowComboboxes.length);
+            console.log("builderContext:", JSON.stringify(this.builderContext));
+            console.log(
+                "automaticOutputVariables:",
+                JSON.stringify(this.automaticOutputVariables)
+            );
+
+            for (let flowCombobox of flowComboboxes) {
+                console.log("Setting context for flow combobox:", flowCombobox);
+                flowCombobox.builderContext = this.builderContext;
+                flowCombobox.automaticOutputVariables = this.automaticOutputVariables;
+            }
+        }
     }
 
     handleDefaultAttributes() {
@@ -177,6 +227,29 @@ export default class DualListBoxCpe extends LightningElement {
 
     }
 
+    handleObjectChange(event) {
+        console.log(
+            "handleObjectChange called with:",
+            JSON.stringify(event.detail)
+        );
+        if (event.target && event.detail) {
+            let typeValue = event.detail.objectType;
+            console.log("Setting objectApiName to:", typeValue);
+            this.inputValues.objectApiName.value = typeValue;
+            this.dispatchFlowValueChangeEvent("objectApiName", typeValue, "String");
+        }
+    }
+
+    handleFieldChange(event) {
+        console.log("handleFieldChange called with:", JSON.stringify(event.detail));
+        if (event.detail && event.currentTarget.name) {
+            let newValue = event.detail.value;
+            console.log("Setting fieldApiName to:", newValue);
+            this.inputValues.fieldApiName.value = newValue;
+            this.dispatchFlowValueChangeEvent("fieldApiName", newValue, "String");
+        }
+    }
+
     dispatchFlowValueChangeEvent(id, newValue, newValueDataType) {
         const valueChangedEvent = new CustomEvent('configuration_editor_input_value_changed', {
             bubbles: true,
@@ -226,6 +299,26 @@ export default class DualListBoxCpe extends LightningElement {
             return this.inputValues.allOptionsStringFormat.value === defaults.originalObject;
         }
 
+    }
+
+    get isPicklist() {
+        if (this.inputValues.allOptionsStringFormat) {
+            return (
+                this.inputValues.allOptionsStringFormat.value === defaults.picklist
+            );
+        }
+    }
+
+    get objectApiNameValue() {
+        return this.inputValues.objectApiName
+            ? this.inputValues.objectApiName.value
+            : null;
+    }
+
+    get fieldApiNameValue() {
+        return this.inputValues.fieldApiName
+            ? this.inputValues.fieldApiName.value
+            : null;
     }
 
 }

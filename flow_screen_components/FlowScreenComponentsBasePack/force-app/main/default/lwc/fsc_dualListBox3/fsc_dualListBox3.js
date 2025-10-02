@@ -1,5 +1,7 @@
-import {LightningElement, api, track} from 'lwc';
+import {LightningElement, api, track, wire} from 'lwc';
 import {FlowAttributeChangeEvent} from "lightning/flowSupport";
+import {getObjectInfo} from "lightning/uiObjectInfoApi";
+import getPicklistValues from "@salesforce/apex/usf3.FieldPickerController.getPicklistValues";
 import {
     defaults,
     inputTypeToOutputAttributeName,
@@ -24,11 +26,19 @@ export default class dualListBoxFSC extends LightningElement {
     @api useWhichObjectKeyForSort;
     @api useObjectValueAsOutput = false;
 
+    // New properties for picklist integration
+    @api objectApiName;
+    @api fieldApiName;
+    @api usePicklistValues = false;
+
     _allOptionsStringFormat;
     @track selectedValuesStringFormat;
     @track _options = [];
     @track _selectedValues = [];
     @track optionValues = {};
+    @track picklistValues = [];
+    @track isLoading = false;
+    @track errorMessage;
     
 
     set allOptionsStringFormat(value) {
@@ -120,6 +130,30 @@ export default class dualListBoxFSC extends LightningElement {
         return this.allOptionsStringFormat && this.useWhichObjectKeyForData && this.useWhichObjectKeyForLabel;
     }
 
+    get isPicklistMode() {
+        return this.usePicklistValues && this.objectApiName && this.fieldApiName;
+    }
+
+    // Wire to get object info for field validation
+    @wire(getObjectInfo, { objectApiName: "$objectApiName" })
+    objectInfo;
+
+    // Wire to get picklist values
+    @wire(getPicklistValues, {
+        objectApiName: "$objectApiName",
+        fieldName: "$fieldApiName",
+    })
+    wiredPicklistValues({ error, data }) {
+        if (data) {
+            this.picklistValues = data;
+            this.updateOptionsFromPicklist();
+        } else if (error) {
+            console.error("Error loading picklist values:", error);
+            this.errorMessage =
+                "Error loading picklist values: " + error.body.message;
+        }
+    }
+
     setOptions(optionName, optionValue) {
         this.optionValues[optionName] = optionValue;
         if (this._allOptionsStringFormat && inputTypeToInputAttributeName[this._allOptionsStringFormat] === optionName && this._allOptionsStringFormat !== defaults.twoLists) {
@@ -139,6 +173,24 @@ export default class dualListBoxFSC extends LightningElement {
         if (labels.length === values.length) {
             for (let i = 0; i < values.length; i++) {
                 this._options.push({label: labels[i], value: values[i]});
+            }
+        }
+    }
+
+    updateOptionsFromPicklist() {
+        if (
+            this.isPicklistMode &&
+            this.picklistValues &&
+            this.picklistValues.length > 0
+        ) {
+            this._options = this.picklistValues.map((picklistValue) => ({
+                label: picklistValue.label,
+                value: picklistValue.value,
+            }));
+
+            // Set the format to list if not already set
+            if (!this._allOptionsStringFormat) {
+                this._allOptionsStringFormat = defaults.list;
             }
         }
     }
@@ -168,6 +220,33 @@ export default class dualListBoxFSC extends LightningElement {
             attributeValue
         );
         this.dispatchEvent(attributeChangeEvent);
+    }
+
+    // Event handlers for picklist properties
+    handleObjectChange(event) {
+        this.objectApiName = event.detail.value;
+        this.fieldApiName = null; // Clear field when object changes
+        this.picklistValues = []; // Clear picklist values
+        this._options = []; // Clear options
+        this.dispatchFlowAttributeChangedEvent("objectApiName", this.objectApiName);
+    }
+
+    handleFieldChange(event) {
+        this.fieldApiName = event.detail.value;
+        this.dispatchFlowAttributeChangedEvent("fieldApiName", this.fieldApiName);
+    }
+
+    handleUsePicklistChange(event) {
+        this.usePicklistValues = event.detail.checked;
+        this.dispatchFlowAttributeChangedEvent(
+            "usePicklistValues",
+            this.usePicklistValues
+        );
+
+        if (!this.usePicklistValues) {
+            this.picklistValues = [];
+            this._options = [];
+        }
     }
 
     @api

@@ -3,6 +3,7 @@ const defaults = {
     list: 'list',
     twoLists: 'twoLists',
     originalObject: 'object',
+    picklist: 'picklist',
     valueField: 'value',
     labelField: 'label',
     inputAttributePrefix: 'select_',
@@ -21,14 +22,16 @@ const inputTypeToOutputAttributeName = {
     csv: 'selectedOptionsCSV',
     list: 'selectedOptionsStringList',
     twoLists: 'selectedOptionsStringList',
-    object: 'selectedOptionsFieldDescriptorList'
+    object: 'selectedOptionsFieldDescriptorList',
+    picklist: 'selectedOptionsStringList'
 };
 
 const inputTypeToInputAttributeName = {
     csv: 'allOptionsCSV',
     list: 'allOptionsStringCollection',
     twoLists: 'allOptionsStringCollectionLabels',
-    object: 'allOptionsFieldDescriptorList'
+    object: 'allOptionsFieldDescriptorList',
+    picklist: 'allOptionsStringCollection'
 };
 
 export {
