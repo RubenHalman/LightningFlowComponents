@@ -182,6 +182,20 @@ jobs:
             # If the env variable does not equal 'all', we know that there is a list of
             # tests that can be run
 
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Run Flow Scanner
+              id: scanner
+              uses: Flow-Scanner/lightning-flow-scanner-action@v2.1.1
+              with:
+                outputMode: sarif      # optional (default)
+
+            - name: Upload SARIF to Code Scanning
+              uses: github/codeql-action/upload-sarif@v3
+              with:
+                sarif_file: ${{ steps.scanner.outputs.sarifPath }}
+
             - name: 'Check-only deploy delta changes - run specified tests'
               if: ${{ env.APEX_TESTS != 'all' }}
               run: |
